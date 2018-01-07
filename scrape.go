@@ -1,30 +1,29 @@
 /*
-   Copyright 2018 by Dave Barach 
-
-   Licensed under the Apache License, Version 2.0 (the "License");
-   you may not use this file except in compliance with the License.
-   You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-   Unless required by applicable law or agreed to in writing, software
-   distributed under the License is distributed on an "AS IS" BASIS,
-   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-   See the License for the specific language governing permissions and
-   limitations under the License.
-*/
+ * Copyright 2018 by Dave Barach 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
-	"strconv"
 	"time"
 )
 
@@ -111,9 +110,10 @@ func scrape() {
 	minute = now.Minute()
 	second = now.Second()
 
-	fmt.Printf("%02d-%02d-%02d-%02d:%02d:%02d: %s correctable errors, %s uncorrectable errors\n", 
-		year, month, day, hour, minute, second, correctables, 
-		uncorrectables)
+	fmt.Printf("%02d-%02d-%02d-%02d:%02d:%02d: ",
+		year, month, day, hour, minute, second)
+	fmt.Printf ("%s correctable errors, %s uncorrectable errors\n", 
+		correctables, uncorrectables)
 }
 
 func main() {
@@ -121,22 +121,25 @@ func main() {
 	var sleep_time time.Duration
 	var work_time time.Duration
 	var work_secs, sleep_secs, delay int
-	var err error
+	var once_only *bool
+	var delay_arg *int
 
-	delay = 60
+	once_only = flag.Bool ("once", false, "run once and quit")
+	delay_arg = flag.Int ("delay", 60, "delay between runs")
 
-	if len(os.Args) > 1 {
-		delay, err = strconv.Atoi(os.Args[1])
-		if err != nil {
-			log.Fatal (fmt.Sprintf ("Couldn't convert '%s' to an integer", os.Args[1]))
-		}
-	}
+	flag.Parse()
+
+	delay = *delay_arg
 
 	for true {
 		/* It takes several seconds to scrape the stats... */
 		before = time.Now()
 		scrape()
 		after = time.Now()
+		
+		if *once_only == true {
+			break;
+		}
 
 		work_time = after.Sub(before)
 		work_secs = int(((work_time + 500000000)/ time.Second))
@@ -145,3 +148,9 @@ func main() {
 		time.Sleep (sleep_time)
 	}
 }
+
+/*
+ * Local Variables:
+ * eval: (set-variable 'tab-width 4 t)
+ * End:
+ */
