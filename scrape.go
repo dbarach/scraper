@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 by Dave Barach 
+ * Copyright 2018 by Dave Barach
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,69 +36,78 @@ func scrape() {
 	var start_loc, end_loc int
 	var now time.Time
 	var year, month, day, hour, minute, second int
-	
+
 	/* Log in */
 	login_url = "http://192.168.100.1/goform/login"
-	form := url.Values {
+	form := url.Values{
 		"loginUsername": {"admin"},
 		"loginPassword": {"password"},
 	}
-	resp, err = http.PostForm (login_url, form)
+	resp, err = http.PostForm(login_url, form)
 	if err != nil {
-		log.Fatal (err)
+		// log.Fatal(err)
+		fmt.Printf("WARN: PostForm failed\n")
+		return
 	}
-	_, err = ioutil.ReadAll (resp.Body)
+	_, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 
 	/* Try to get useful data */
-	resp, err = http.Get ("http://192.168.100.1/RgConnect.asp")
+	resp, err = http.Get("http://192.168.100.1/RgConnect.asp")
 	if err != nil {
-		log.Fatal (err)
+		fmt.Printf("WARN: http get failed\n")
+		return
 	}
-	data, err = ioutil.ReadAll (resp.Body)
+	data, err = ioutil.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		log.Fatal (err)
+		log.Fatal(err)
 	}
 
 	/* Turn byte array into a string */
 	string_data = string(data)
 
 	/* Search for the summary stats */
-	start_loc = strings.Index (string_data, "Total Uncorrectables")
+	start_loc = strings.Index(string_data, "Total Uncorrectables")
 
 	if start_loc == -1 {
-		log.Fatal ("Missing <th> Total Uncorrectables")
+		// log.Fatal("Missing <th> Total Uncorrectables")
+		fmt.Printf("WARN: Missing <th> Total Uncorrectables\n")
+		return
 	}
-	
+
 	/* Search for the correctable error count, in the first <td> */
 	after_tag = string_data[start_loc:len(string_data)]
-	start_loc = strings.Index (after_tag, "<td>")
+	start_loc = strings.Index(after_tag, "<td>")
 	if start_loc == -1 {
-		log.Fatal ("Missing <td>")
+		fmt.Printf("WARN: Missing <td>\n")
+		return
 	}
-	start_loc = start_loc + 4;
-	end_loc = strings.Index (after_tag, "</td>")
+	start_loc = start_loc + 4
+	end_loc = strings.Index(after_tag, "</td>")
 	if end_loc == -1 {
-		log.Fatal ("Missing </td>")
+		fmt.Printf("WARN: Missing </td>\n")
+		return
 	}
 
 	correctables = after_tag[start_loc:end_loc]
 
 	/* Chop off the correctable count */
-	after_tag = after_tag[end_loc+1:len(after_tag)]
-	
+	after_tag = after_tag[end_loc+1 : len(after_tag)]
+
 	/* Search for the uncorrectable count */
-	start_loc = strings.Index (after_tag, "<td>")
+	start_loc = strings.Index(after_tag, "<td>")
 	if start_loc == -1 {
-		log.Fatal ("Missing <td>")
+		fmt.Printf("WARN: Missing <td>\n")
+		return
 	}
-	start_loc = start_loc + 4;
-	end_loc = strings.Index (after_tag, "</td>")
+	start_loc = start_loc + 4
+	end_loc = strings.Index(after_tag, "</td>")
 	if end_loc == -1 {
-		log.Fatal ("Missing </td>")
+		fmt.Printf("WARN: Missing </td>\n")
+		return
 	}
-	
+
 	/* Extract it */
 	uncorrectables = after_tag[start_loc:end_loc]
 
@@ -112,7 +121,7 @@ func scrape() {
 
 	fmt.Printf("%02d-%02d-%02d-%02d:%02d:%02d: ",
 		year, month, day, hour, minute, second)
-	fmt.Printf ("%s correctable errors, %s uncorrectable errors\n", 
+	fmt.Printf("%s correctable errors, %s uncorrectable errors\n",
 		correctables, uncorrectables)
 }
 
@@ -124,8 +133,8 @@ func main() {
 	var once_only *bool
 	var delay_arg *int
 
-	once_only = flag.Bool ("once", false, "run once and quit")
-	delay_arg = flag.Int ("delay", 60, "delay between runs")
+	once_only = flag.Bool("once", false, "run once and quit")
+	delay_arg = flag.Int("delay", 60, "delay between runs")
 
 	flag.Parse()
 
@@ -136,21 +145,15 @@ func main() {
 		before = time.Now()
 		scrape()
 		after = time.Now()
-		
+
 		if *once_only == true {
-			break;
+			break
 		}
 
 		work_time = after.Sub(before)
-		work_secs = int(((work_time + 500000000)/ time.Second))
+		work_secs = int(((work_time + 500000000) / time.Second))
 		sleep_secs = delay - work_secs
 		sleep_time = time.Duration(sleep_secs) * time.Second
-		time.Sleep (sleep_time)
+		time.Sleep(sleep_time)
 	}
 }
-
-/*
- * Local Variables:
- * eval: (set-variable 'tab-width 4 t)
- * End:
- */
